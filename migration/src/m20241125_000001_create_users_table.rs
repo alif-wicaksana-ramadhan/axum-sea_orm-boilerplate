@@ -2,7 +2,7 @@ use sea_orm_migration::prelude::*;
 use sea_query::extension::postgres::Type;
 
 #[derive(Iden)]
-enum Users {
+pub enum Users {
     Table,
     Id,
     Username,
@@ -79,10 +79,11 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         if manager.has_table(Users::Table.to_string()).await? {
-        manager
-            .drop_table(Table::drop().table(Users::Table).to_owned())
-            .await?;
+            manager
+                .drop_table(Table::drop().table(Users::Table).to_owned())
+                .await?;
         }
+        manager.drop_type(Type::drop().name(UserRole::Table).to_owned()).await?;
         Ok(())
     }
 }

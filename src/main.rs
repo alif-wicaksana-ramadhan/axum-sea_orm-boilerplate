@@ -1,62 +1,24 @@
-mod db;
-mod api;
-mod services;
-mod repositories;
-mod extensions;
+use dotenvy::dotenv;
+use crate::interface::routes::create_router;
 
-use std::collections::HashMap;
-use std::sync::Arc;
-use axum::{Extension, Json, Router};
-use axum::extract::Query;
-use axum::http::StatusCode;
-use axum::routing::{get, post};
-use serde::{Deserialize, Serialize};
-use crate::extensions::auth::AuthState;
+mod interface;
+mod application;
+mod core;
+mod infrastructure;
 
 #[tokio::main]
 async fn main() {
-    let db = Arc::new(db::establish_connection().await);
-    let auth = Arc::new(AuthState::new("valid_secret".to_string()));
+    dotenv().ok(); // Load the environment variables
 
-    let app = Router::new()
-        .route("/", get(root))
-        .route("/users", post(create_user))
-        .layer(Extension(db))
-        .layer(Extension(auth));
+    let app = create_router();
+    let addr: String = "0.0.0.0:8000".parse().unwrap();
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000")
+    println!("Server running on {}", addr);
+
+    let listener = tokio::net::TcpListener::bind(addr)
         .await
         .unwrap();
-
-    axum::serve(listener, app).await.unwrap();
-}
-
-async fn root() -> &'static str {
-    "Hello, World!"
-}
-
-async fn get_user(Query(params): Query<HashMap<String, String>>) {
-
-}
-
-async fn create_user(Json(payload): Json<CreateUser>) -> (StatusCode, Json<User>) {
-    let user = User {
-        id: 1337,
-        username: payload.username,
-    };
-
-    (StatusCode::CREATED, Json(user))
-}
-
-// the input to our `create_user` handler
-#[derive(Deserialize)]
-struct CreateUser {
-    username: String,
-}
-
-// the output to our `create_user` handler
-#[derive(Serialize)]
-struct User {
-    id: u64,
-    username: String,
+    axum::serve(listener, app)
+        .await
+        .unwrap();
 }
